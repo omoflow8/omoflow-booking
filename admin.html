@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omo Flow แอดมิน</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top"><div class="brand"><img src="/icons/icon-192.png" alt=""><span>Omo Flow <small>แอดมิน</small></span></div></header>
+<main>
+  <div class="card" id="login">
+    <input id="key" type="password" placeholder="ADMIN_KEY">
+    <button class="btn primary" id="go">เข้าสู่ระบบ</button>
+  </div>
+  <h2>รายการจองทั้งหมด <button class="btn ghost small" id="reload">รีเฟรช</button></h2>
+  <div id="list"></div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+let key = sessionStorage.getItem('k') || '', CFG;
+async function load() {
+  CFG = CFG || await fetch('/api/config').then(r => r.json());
+  const r = await fetch('/api/bookings', { headers: { 'x-admin-key': key } });
+  const list = await r.json();
+  if (!Array.isArray(list) || (!list.length && !key)) { $('#list').innerHTML = '<p class="hint">ใส่ ADMIN_KEY</p>'; return; }
+  $('#login').hidden = true;
+  $('#list').innerHTML = list.map(b => `
+    <div class="card bk">
+      <div class="bk-head"><b>${b.id}</b><span class="pill ${b.status}">${CFG.status[b.status]}</span></div>
+      <p>${CFG.vehicles[b.vehicle].name} · ${b.distanceKm} กม. · <b>${b.quote.total.toLocaleString()} ฿</b></p>
+      <p>📍 ${esc(b.pickup)}</p>${b.drops.map(d => `<p>🏁 ${esc(d)}</p>`).join('')}
+      <p>👤 ${esc(b.contact.name)} ${esc(b.contact.phone)} ${b.lineUserId ? '· LINE ✅' : ''}</p>
+      ${b.note ? `<p>📝 ${esc(b.note)}</p>` : ''}
+      <p class="hint">${b.when === 'now' ? 'ด่วน' : new Date(b.when).toLocaleString('th-TH')}</p>
+      <select data-id="${b.id}">${Object.entries(CFG.status).map(([k, v]) => `<option value="${k}" ${k === b.status ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    </div>`).join('') || '<p class="hint">ยังไม่มีการจอง</p>';
+}
+document.addEventListener('change', async e => {
+  const id = e.target.dataset.id; if (!id) return;
+  await fetch(`/api/bookings/${id}/status`, { method: 'POST', headers: { 'x-admin-key': key }, body: JSON.stringify({ status: e.target.value }) });
+  load();
+});
+$('#go').onclick = () => { key = $('#key').value; sessionStorage.setItem('k', key); load(); };
+$('#reload').onclick = load;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+if (key) load();
+setInterval(() => key && load(), 30000);
+</script>
+</body>
+</html>

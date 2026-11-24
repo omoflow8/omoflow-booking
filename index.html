@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Omo Flow จองรถ</title>
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Omo Flow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><img src="/icons/icon-192.png" alt=""><span>Omo Flow <small>จองรถขนส่ง</small></span></div>
+  <button id="installBtn" class="btn ghost small" hidden>⬇ ติดตั้งแอป</button>
+</header>
+
+<main>
+  <!-- ===== จองรถ ===== -->
+  <section id="tab-book" class="tab active">
+    <h2>1. เลือกประเภทรถ</h2>
+    <div id="vehicles" class="vehicles"></div>
+
+    <h2>2. จุดรับ-ส่งของ</h2>
+    <div class="card">
+      <label class="lbl">📍 จุดรับของ</label>
+      <div class="addr"><input id="pickup" placeholder="ที่อยู่ / ชื่อสถานที่" autocomplete="off"><button class="btn ghost small" data-geo="pickup">ค้นหา</button></div>
+      <div id="drops"></div>
+      <button id="addDrop" class="btn ghost small">＋ เพิ่มจุดส่งของ</button>
+      <div id="map"></div>
+      <div class="row">
+        <label class="lbl">ระยะทางรวม (กม.)</label>
+        <input id="distance" type="number" min="0" step="0.1" inputmode="decimal" placeholder="คำนวณอัตโนมัติ หรือกรอกเอง">
+      </div>
+      <p class="hint">กด "ค้นหา" ที่แต่ละที่อยู่เพื่อปักหมุด ระบบจะประมาณระยะทางให้ หรือแตะบนแผนที่เพื่อปักหมุดจุดล่าสุด</p>
+    </div>
+
+    <h2>3. วัน-เวลารับของ</h2>
+    <div class="card">
+      <div class="seg">
+        <label><input type="radio" name="when" value="now" checked> ด่วน (เร็วที่สุด)</label>
+        <label><input type="radio" name="when" value="later"> จองล่วงหน้า</label>
+      </div>
+      <input id="whenAt" type="datetime-local" hidden>
+    </div>
+
+    <h2>4. บริการเสริม</h2>
+    <div class="card extras">
+      <label><input type="checkbox" id="exLoading"> คนขับช่วยยกของขึ้น-ลง <span class="price" data-ex="loading"></span></label>
+      <label>ผู้ช่วยยกของเพิ่ม
+        <select id="exHelpers"><option value="0">ไม่ต้องการ</option><option>1</option><option>2</option><option>3</option></select>
+        <span class="price" id="helperPrice"></span></label>
+      <label><input type="checkbox" id="exPod"> ส่งคืนเอกสาร (POD) <span class="price" data-ex="pod"></span></label>
+    </div>
+
+    <h2>5. ผู้ติดต่อ</h2>
+    <div class="card">
+      <input id="cName" placeholder="ชื่อผู้ติดต่อ" autocomplete="name">
+      <input id="cPhone" placeholder="เบอร์โทร" inputmode="tel" autocomplete="tel">
+      <textarea id="note" rows="2" placeholder="หมายเหตุถึงคนขับ (เช่น ของแตกง่าย)"></textarea>
+    </div>
+
+    <div class="summary card">
+      <div id="quoteLines"></div>
+      <div class="total"><span>ราคาประเมิน</span><strong id="total">–</strong></div>
+      <button id="submit" class="btn primary block">ยืนยันการจอง</button>
+      <p class="hint">ราคาเป็นการประเมินเบื้องต้น แจ้งเตือนสถานะจะส่งเข้า LINE (ตั้งค่าที่แท็บ ตั้งค่า)</p>
+    </div>
+  </section>
+
+  <!-- ===== รายการจอง ===== -->
+  <section id="tab-list" class="tab">
+    <h2>การจองของฉัน <button id="refresh" class="btn ghost small">รีเฟรช</button></h2>
+    <div id="list"></div>
+  </section>
+
+  <!-- ===== ตั้งค่า ===== -->
+  <section id="tab-settings" class="tab">
+    <h2>แจ้งเตือนผ่าน LINE</h2>
+    <div class="card">
+      <ol class="steps">
+        <li>เพิ่มเพื่อน LINE Official Account ของ Omo Flow <a id="addFriend" class="btn line small" target="_blank" rel="noopener" hidden>เพิ่มเพื่อนใน LINE</a></li>
+        <li>พิมพ์ข้อความอะไรก็ได้ บอทจะตอบกลับ "รหัส LINE" ของคุณ</li>
+        <li>นำรหัสมาวางด้านล่าง แล้วกดบันทึก</li>
+      </ol>
+      <input id="lineId" placeholder="รหัส LINE เช่น Uxxxxxxxx..." autocomplete="off">
+      <button id="saveLine" class="btn primary">บันทึก</button>
+      <p id="lineState" class="hint"></p>
+    </div>
+    <h2>ติดตั้งแอป</h2>
+    <div class="card hint">
+      <p><b>คอมพิวเตอร์ (Chrome/Edge):</b> กดปุ่ม "ติดตั้งแอป" มุมขวาบน หรือไอคอน ⊕ ในแถบที่อยู่</p>
+      <p><b>Android:</b> เมนู ⋮ → "ติดตั้งแอป" / "เพิ่มลงในหน้าจอหลัก"</p>
+      <p><b>iPhone (Safari):</b> ปุ่มแชร์ → "เพิ่มไปยังหน้าจอโฮม"</p>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom">
+  <button data-tab="book" class="on">🚚<span>จองรถ</span></button>
+  <button data-tab="list">📋<span>การจอง</span></button>
+  <button data-tab="settings">⚙️<span>ตั้งค่า</span></button>
+</nav>
+
+<div id="toast"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
