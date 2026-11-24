@@ -13,6 +13,7 @@ const LINE_ADMIN_TO = (process.env.LINE_ADMIN_TO || '').split(',').map(s => s.tr
 const ADMIN_KEY = process.env.ADMIN_KEY || 'change-me';
 const DATA_FILE = path.join(__dirname, 'data', 'bookings.json');
 const PUBLIC = path.join(__dirname, 'public');
+const WEB_FILES = new Set(['index.html', 'admin.html', 'app.js', 'style.css', 'sw.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png']);
 
 // ---------- ราคา (ตัวอย่าง ปรับได้ตามจริง) ----------
 const VEHICLES = {
@@ -166,10 +167,13 @@ http.createServer(async (req, res) => {
     let p = path.normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[\/\\])+/, '');
     if (p === '/' || p === '\\') p = '/index.html';
     if (p === '/admin') p = '/admin.html';
-    const file = path.join(PUBLIC, p);
-    if (!file.startsWith(PUBLIC) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    let file = path.join(PUBLIC, p);
+    // สำรอง: ถ้าไฟล์หน้าเว็บถูกอัปโหลดไว้ชั้นนอกสุด (ไม่มีโฟลเดอร์ public) ให้หาจากชั้นนอกสุด เฉพาะไฟล์หน้าเว็บที่อนุญาตเท่านั้น
+    const base = path.basename(p);
+    if (!fs.existsSync(file) && WEB_FILES.has(base) && fs.existsSync(path.join(__dirname, base))) file = path.join(__dirname, base);
+    if (!(file.startsWith(PUBLIC) || WEB_FILES.has(path.basename(file))) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(fs.existsSync(path.join(PUBLIC, 'index.html'))
+      return res.end(fs.existsSync(path.join(PUBLIC, 'index.html')) || fs.existsSync(path.join(__dirname, 'index.html'))
         ? '<p>ไม่พบหน้านี้ <a href="/">กลับหน้าแรก</a></p>'
         : '<h3>ไม่พบโฟลเดอร์ public/index.html บนเซิร์ฟเวอร์</h3><p>ตรวจว่าอัปโหลดโฟลเดอร์ public ขึ้น GitHub ครบ</p>');
     }
