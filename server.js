@@ -149,11 +149,13 @@ http.createServer(async (req, res) => {
       for (const ev of JSON.parse(raw).events || []) {
         const id = ev.source?.groupId || ev.source?.userId;
         console.log('[LINE webhook]', ev.type, 'source id =', id);
-        if (ev.replyToken && (ev.type === 'follow' || ev.type === 'message' || ev.type === 'join')) {
+        // ตอบรหัสเมื่อ: เพิ่มเพื่อน, บอทถูกเชิญเข้ากลุ่ม, หรือมีคนพิมพ์ "id" / "รหัส" (กลุ่มจะได้ไม่โดนตอบทุกข้อความ)
+        const askId = ev.type === 'message' && /^(id|รหัส)$/i.test((ev.message?.text || '').trim());
+        if (ev.replyToken && (ev.type === 'follow' || ev.type === 'join' || askId)) {
           await fetch('https://api.line.me/v2/bot/message/reply', {
             method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + LINE_TOKEN },
             body: JSON.stringify({ replyToken: ev.replyToken, messages: [{ type: 'text',
-              text: `สวัสดีครับ 👋 นำรหัสนี้ไปวางในแอป Omo Flow (เมนู ตั้งค่า) เพื่อรับแจ้งเตือนการจอง:\n\n${id}` }] }),
+              text: `สวัสดีครับ 👋 รหัส LINE ของ${ev.source?.groupId ? "กลุ่มนี้ (ใส่ใน LINE_ADMIN_TO)" : "คุณ (วางในแอป เมนู ตั้งค่า)"}:\n\n${id}` }] }),
           }).catch(() => {});
         }
       }
@@ -166,7 +168,10 @@ http.createServer(async (req, res) => {
     if (p === '/admin') p = '/admin.html';
     const file = path.join(PUBLIC, p);
     if (!file.startsWith(PUBLIC) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      res.writeHead(302, { Location: '/' }); return res.end();
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end(fs.existsSync(path.join(PUBLIC, 'index.html'))
+        ? '<p>ไม่พบหน้านี้ <a href="/">กลับหน้าแรก</a></p>'
+        : '<h3>ไม่พบโฟลเดอร์ public/index.html บนเซิร์ฟเวอร์</h3><p>ตรวจว่าอัปโหลดโฟลเดอร์ public ขึ้น GitHub ครบ</p>');
     }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
       'Cache-Control': p === '/sw.js' ? 'no-cache' : 'public, max-age=300' });
@@ -175,6 +180,7 @@ http.createServer(async (req, res) => {
     console.error(e); send(res, 500, { error: e.message });
   }
 }).listen(PORT, () => {
+  if (!fs.existsSync(path.join(PUBLIC, 'index.html'))) console.error('❌ ไม่พบ public/index.html — ตรวจว่าอัปโหลดโฟลเดอร์ public ขึ้น GitHub แล้ว');
   console.log(`Omo Flow Booking เปิดที่ http://localhost:${PORT}  (แอดมิน: /admin)`);
   if (!LINE_TOKEN) console.log('ยังไม่ได้ตั้ง LINE_CHANNEL_ACCESS_TOKEN — ข้อความแจ้งเตือนจะแสดงในคอนโซลแทน');
 });

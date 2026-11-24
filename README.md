@@ -22,7 +22,7 @@
 1. สร้าง LINE Official Account และเปิด Messaging API ที่ https://developers.line.biz
 2. คัดลอก **Channel access token** และ **Channel secret** ใส่ใน `.env`
 3. ตั้ง Webhook URL เป็น `https://โดเมนของคุณ/webhook` แล้วเปิด "Use webhook"
-4. เพิ่มเพื่อน OA แล้วพิมพ์อะไรก็ได้ บอทจะตอบรหัส (userId) กลับมา
+4. เพิ่มเพื่อน OA หรือเชิญเข้ากลุ่ม บอทจะตอบรหัสกลับมา (พิมพ์ "id" เพื่อขอรหัสอีกครั้ง)
    - ลูกค้า: นำรหัสไปวางในแอป เมนู ตั้งค่า
    - ทีมงาน: ใส่รหัสใน `LINE_ADMIN_TO` (เชิญบอทเข้ากลุ่มเพื่อได้ groupId ก็ได้)
 5. ใส่ลิงก์เพิ่มเพื่อนใน `LINE_ADD_FRIEND_URL` เพื่อให้แสดงปุ่มในแอป
